@@ -1,20 +1,30 @@
-#import needed modules
+#!/usr/bin/env python3
 import socket
 
-#set communication port
 port = 5000
 
-#make tcp socket for assured delivery
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-#bind the socket to all IP addresses and port 5000
 sock.bind(('', port))
 
-#listen for connections, allowing only one
 sock.listen(1)
 
-#get the communication socket and address of connected device
 s, address = sock.accept()
 
-#send a welcome message
-s.send('You have connected'.encode())
+s.send('Connected'.encode())
+
+running = True
+
+while running:
+    command = s.recv(1024).decode()
+
+    if command == 'exit':
+        running = False
+    elif command == 'send':
+        pass
+    elif command == 'record':
+        pass
+    elif command == 'stop':
+        pass
+    else:
+        print(command)
