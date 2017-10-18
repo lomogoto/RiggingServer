@@ -20,8 +20,3 @@ sudo nmcli connection up $CON
 #run the server code
 echo "Starting Server"
 python3 server.py
-
-#remove the connection after server code finishes
-echo "Cleaning Up"
-sudo nmcli connection down $CON
-sudo nmcli connection delete $CON

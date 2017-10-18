@@ -33,7 +33,7 @@ To launch the server at boot, enable the autologin@.serivce in systemd and remov
     #rm /etc/systemd/system/getty.target.wants/*
     #systemctl enable autologin@.service
 
-Then add then execute the launcher.sh script in the bash rc file if in the first terminal (TTY1):
+Then execute the launcher.sh script in the bash rc file if in the first terminal (TTY1):
 
     $echo 'if [ $(tty) == /dev/tty1 ]; then' >> ~/.bashrc
     $echo 'cd ~/RiggingServer' >> ~/.bashrc
