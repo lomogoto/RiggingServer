@@ -59,3 +59,20 @@ NetworkManager also needs to manage the wireless card:
 Check the device status with:
 
     #nmcli device
+
+
+
+ENABLING I2C
+
+Enable the kernal option for I2C under interfacing options in rasppi-config
+
+    #raspi-config
+
+Then install the dependancies
+
+    #apt-get install i2c-tools
+    #apt-get install python-smbus
+
+Find devices and their addresses on I2C channel 1
+
+    #i2cdetect -y 1
