@@ -19,4 +19,4 @@ sudo nmcli connection up $CON
 
 #run the server code
 echo "Starting Server"
-python3 server.py
+#python3 server.py

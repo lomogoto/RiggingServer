@@ -3,12 +3,13 @@ import socket
 import threading
 import json
 import time
-####import smbus
+import smbus
 
 #rigging data server
 class server():
     #set configuration variables
     port = 6500
+    alpha = 0
     sensors = {'rf':0x68}
     registers = {'ax':0x3B, 'ay':0x3D, 'az':0x3f, 'gx':0x43, 'gy':0x45, 'gz':0x47}
     power = 0x6B
@@ -18,7 +19,7 @@ class server():
     #initialize the server
     def __init__(self):
         #initialize i2c bus
-        ####self.bus = sbmus.SMBUS(1)
+        self.bus = smbus.SMBus(1)
 
         #make socket listening on port
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,6 +28,11 @@ class server():
 
         #make new socket accepting a connection
         self.sock, addr = s.accept()
+
+        #sensor data
+        self.data = {'t' : 0}
+        for s in self.sensors:
+            self.data[s] = [0, 0, 0]
 
         #start with no data collection active
         self.running = False
@@ -57,14 +63,17 @@ class server():
 
             #start processing data in the background
             if command == self.start_request:
+                #enable polling
+                self.running = True
+
                 #initialize sensors
-                for sensor in self.sensors:
-                    pass ####self.init_sensor(self.sensors[sensor])
+                for s in self.sensors:
+                    self.init_sensor(self.sensors[s])
 
                 #start processing thread
-                self.start_time = time.time()
+                self.data['t'] = time.time()
                 t = threading.Thread(target = self.process)
-                ####t.start()
+                t.start()
 
                 #confirm start
                 self.sock.send('started'.encode())
@@ -84,15 +93,24 @@ class server():
     def process(self):
         #loop until server is shut down
         while self.running:
-            pass
+            #start by reading time and change in time
+            t = time.time()
+            dt = t - self.data['t']
+            self.data['t'] = t
+
+            #loop over sensors and registers to get readings for each
+            for s in self.sensors:
+                read = {}
+                for r in self.registers:
+                    #read each register for sensor
+                    read[r] = self.get_register_data(self.sensors[s], self.registers[r])
+
+                #update data for sensor
+                self.data[s][0] = (1 - self.alpha) * (self.data[s][0] + read['gx']/131.072 * dt) + self.alpha * 1
 
     #pack data into one dictionary for json dump
     def pack(self):
-        #form dictionary for sending
-        data = {'t' : 0,
-            's1' : [1, 2, 3],
-            's2' : [4, 5, 6],
-            's3' : [7, 8, 9]}
+        data = self.data
 
         #return data encoded into a string
         return json.dumps(data, separators = (',', ':'))
