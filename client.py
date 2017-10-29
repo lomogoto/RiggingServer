@@ -6,7 +6,7 @@ import json
 #client interface
 class client():
     #set configuration variables
-    address = ('127.0.0.1', 6500)
+    address = ('10.42.0.1', 6500)
 
     #initialize the client
     def __init__(self):
