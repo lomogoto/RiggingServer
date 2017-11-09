@@ -25,7 +25,7 @@ LAUNCHING AT STARTUP
 The Raspberry Pi default username is 'pi' and the default password is 'raspberry'. These will be required at first login and when logging in through SSH which can be setup with:
 
     #apt-get install openssh-server
-    #nano /etc/ssh/sshd_config
+    #echo 'UseDNS no' >> /etc/ssh/sshd_config
     #systemctl enable ssh.socket
 
 To launch the server at boot, enable the autologin@.serivce in systemd and remove the original login daemon:
@@ -67,6 +67,11 @@ ENABLING I2C
 Enable the kernal option for I2C under interfacing options in rasppi-config
 
     #raspi-config
+
+Enable at boot by adding lines to the boot tree
+
+    #echo 'dtparam=i2c1=on' >> /boot/config.txt
+    #echo 'dtparam=i2c_arm=on' >> /boot/config.txt
 
 Then install the dependancies
 

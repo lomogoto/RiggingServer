@@ -46,3 +46,15 @@ class client():
     def stop(self):
         self.running = False
         self.sock.send(self.stop_request)
+
+#run basic test if main
+if __name__ == '__main__':
+    import time
+    c = client()
+    c.start()
+    try:
+        while True:
+            time.sleep(0.5)
+            print(c.data)
+    finally:
+        c.stop()
