@@ -13,9 +13,9 @@ class server():
     alpha = 0.02
 
     mpu6050registers = {'ax':0x3B, 'ay':0x3D, 'az':0x3f, 'gx':0x43, 'gy':0x45, 'gz':0x47}
-    mpu6050calibrations = {'gx':0, 'gy':0, 'gz':0}
 
-    sensors = {'rf': {'address':0x68, 'registers':mpu6050registers, 'calibrations':mpu6050calibrations}}
+    sensors = {'rf': {'address':0x68, 'registers':mpu6050registers, 'calibrations':{'gx':0, 'gy':0, 'gz':0}},
+        'rt': {'address':0x69, 'registers':mpu6050registers, 'calibrations':{'gx':0, 'gy':0, 'gz':0}}}
 
     power = 0x6B
     a_conf = 0x1B
@@ -30,6 +30,7 @@ class server():
 
         #make socket listening on port
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(('', self.port))
         s.listen(1)
 
@@ -104,6 +105,8 @@ class server():
 
             #transmit current data values
             elif command == self.send_request:
+                print('.')
+
                 #pack the data in the json standard format with no whitespace
                 self.sock.send(self.pack().encode())
 
