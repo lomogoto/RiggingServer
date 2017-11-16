@@ -14,7 +14,7 @@ client = py.importlib.import_module('client').client();
 client.start()
 
 %make unit vector for limbs
-u = [0;0;1];
+u = [0;1;0];
 
 %initialize data
 xdata = [0, 0, 0];
@@ -23,7 +23,10 @@ zdata = [0, 1, 2];
 
 %plot data in three dimentions
 fig = plot3(xdata, ydata, zdata, 'b-o');
-axis([-2, 2, -2, 2, 0, 2])
+xlabel('x')
+ylabel('y')
+zlabel('z')
+axis([-2, 2, -2, 2, -2, 2])
 grid on
 
 %set data sources to update graph properly
@@ -43,9 +46,9 @@ while running
     z = client.get('rf', 2)*pi/180;
 
     %calculate rotation matrix for each data value
-    rx = [1, 0, 0; 0, cos(x), -sin(x); 0, sin(x), cos(x)];
+    rz = [1, 0, 0; 0, cos(x), -sin(x); 0, sin(x), cos(x)];
     ry = [cos(y), 0, sin(y); 0, 1, 0; -sin(y), 0, cos(y)];
-    rz = [cos(z), -sin(z), 0; sin(z), cos(z), 0; 0, 0, 1];
+    rx = [cos(z), -sin(z), 0; sin(z), cos(z), 0; 0, 0, 1];
 
     %calculate vector 1
     v1 = rx*ry*rz*u;
@@ -56,9 +59,9 @@ while running
     z = client.get('rt', 2)*pi/180;
 
     %calculate rotation matrix for each data value
-    rx = [1, 0, 0; 0, cos(x), -sin(x); 0, sin(x), cos(x)];
+    rz = [1, 0, 0; 0, cos(x), -sin(x); 0, sin(x), cos(x)];
     ry = [cos(y), 0, sin(y); 0, 1, 0; -sin(y), 0, cos(y)];
-    rz = [cos(z), -sin(z), 0; sin(z), cos(z), 0; 0, 0, 1];
+    rx = [cos(z), -sin(z), 0; sin(z), cos(z), 0; 0, 0, 1];
 
     %calculate vector 2
     v2 = rx*ry*rz*u;
@@ -73,7 +76,7 @@ while running
     
     %try to update and draw to figure
     try
-        set(text, 'String', strjoin(['Knee: ', string(knee)]))
+        %set(text, 'String', strjoin(['Knee: ', string(knee)]))
         refreshdata(fig, 'caller')
         drawnow limitrate
         
