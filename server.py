@@ -105,7 +105,6 @@ class server():
 
             #transmit current data values
             elif command == self.send_request:
-                print('.')
 
                 #pack the data in the json standard format with no whitespace
                 self.sock.send(self.pack().encode())
@@ -118,49 +117,55 @@ class server():
 
     #read from sensors and integrate on a loop
     def process(self):
-        #loop until server is shut down
-        while self.running:
-            #start by reading time and change in time
-            t = time.time()
-            dt = t - self.data['t']
-            self.data['t'] = t
 
-            #loop over sensors and registers to get readings for each
-            for s in self.sensors:
-                #pick a sensor by name
-                sensor = self.sensors[s]
+        try:
 
-                #dictionary of sensor reading
-                read = {}
+            #loop until server is shut down
+            while self.running:
+                #start by reading time and change in time
+                t = time.time()
+                dt = t - self.data['t']
+                self.data['t'] = t
+    
+                #loop over sensors and registers to get readings for each
+                for s in self.sensors:
+                    #pick a sensor by name
+                    sensor = self.sensors[s]
+    
+                    #dictionary of sensor reading
+                    read = {}
+    
+                    #loop over registers
+                    for r in sensor['registers']:
+                        #pick a register by name
+                        register = sensor['registers'][r]
+    
+                        try:
+                            calibration = sensor['calibrations'][r]
+                        except:
+                            calibration = 0
+    
+                        #read each register for sensor
+                        read[r] = self.get_register_data(sensor['address'], register, calibration)
+    
+                    #get angles from acceleration
+                    x = math.atan2(read['ay'], read['az'])*180/math.pi - 90
+                    y = math.atan2(read['ax'], read['az'])*180/math.pi
+                    z = math.atan2(read['ay'], read['ax'])*180/math.pi - 90
+    
+                    #calculate the impact of gravity on that angle
+                    mag = math.sqrt(read['ax']**2 + read['ay']**2 + read['az']**2)
+                    xMag = 1 #math.sqrt(read['ay']**2 + read['az']**2) / mag
+                    yMag = 0 #math.sqrt(read['ax']**2 + read['az']**2) / mag
+                    zMag = 1 #math.sqrt(read['ay']**2 + read['ax']**2) / mag
+    
+                    #update data for sensor
+                    self.data[s][0] = (1 - self.alpha * xMag) * (self.data[s][0] + read['gx']/131.072 * dt) + self.alpha * xMag * x
+                    self.data[s][1] = (1 - self.alpha * yMag) * (self.data[s][1] + read['gy']/131.072 * dt) + self.alpha * yMag * y
+                    self.data[s][2] = (1 - self.alpha * zMag) * (self.data[s][2] + read['gz']/131.072 * dt) + self.alpha * zMag * z
 
-                #loop over registers
-                for r in sensor['registers']:
-                    #pick a register by name
-                    register = sensor['registers'][r]
-
-                    try:
-                        calibration = sensor['calibrations'][r]
-                    except:
-                        calibration = 0
-
-                    #read each register for sensor
-                    read[r] = self.get_register_data(sensor['address'], register, calibration)
-
-                #get angles from acceleration
-                x = math.atan2(read['ay'], read['az'])*180/math.pi
-                y = math.atan2(read['ax'], read['az'])*180/math.pi
-                z = math.atan2(read['ay'], read['ax'])*180/math.pi
-
-                #calculate the impact of gravity on that angle
-                mag = math.sqrt(read['ax']**2 + read['ay']**2 + read['az']**2)
-                xMag = math.sqrt(read['ay']**2 + read['az']**2) / mag
-                yMag = math.sqrt(read['ax']**2 + read['az']**2) / mag
-                zMag = math.sqrt(read['ay']**2 + read['ax']**2) / mag
-
-                #update data for sensor
-                self.data[s][0] = (1 - self.alpha * xMag) * (self.data[s][0] + read['gx']/131.072 * dt) + self.alpha * xMag * x
-                self.data[s][1] = (1 - self.alpha * yMag) * (self.data[s][1] + read['gy']/131.072 * dt) + self.alpha * yMag * y
-                self.data[s][2] = (1 - self.alpha * zMag) * (self.data[s][2] + read['gz']/131.072 * dt) + self.alpha * zMag * z
+        except Exception as e:
+            print(e)
 
     #pack data into one dictionary for json dump
     def pack(self):
