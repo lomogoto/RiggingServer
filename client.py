@@ -31,6 +31,15 @@ class client():
             self.sock.send(self.send_request)
             self.data = json.loads(self.sock.recv(4096).decode())
 
+    #get data nicely from matlab
+    def get(self, key, index = None):
+        try:
+            if index == None:
+                return self.data[key]
+            return float(self.data[key][int(index)])
+        except:
+            return float(0)
+
     #start data collection
     def start(self):
         #enable the collection
