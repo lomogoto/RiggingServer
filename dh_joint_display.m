@@ -15,9 +15,7 @@ end
 client = py.importlib.import_module('client').client();
 
 %start the client and connect to server
-client.start()
-
-
+t0 = client.start();
 
 %%%%%%   Initial Set Up of Data   %%%%%%
 
@@ -43,7 +41,9 @@ th1 = 0;    %Theta1 will always be 0
 th2 = -90;
 th3 = 0;
 th4 = 0;
-% 
+ 
+
+%THIS SECTION OF CODE HAS BEEN COMMENTED OUT AS IT WAS DEEMED UNNECESSARY
 % %Rotation Matrix Construction
 % Ar1 = [cosd(th1) -sind(th1)*cosd(alp1) sind(th1)*sind(alp1) a1*cosd(th1);...
 %       sind(th1) cosd(th1)*cosd(alp1) -cosd(th1)*sind(alp1) a1*sind(th1);...
@@ -83,28 +83,43 @@ th4 = 0;
 % xdata = [xyz0(1) xyz1(1) xyz2(1) xyz3(1) xyz4(1)];
 % ydata = [xyz0(2) xyz1(2) xyz2(2) xyz3(2) xyz4(2)];
 % zdata = [xyz0(3) xyz1(3) xyz2(3) xyz3(3) xyz4(3)];
+%END UNNECESSARY CODE BLOCK
 
 %Initail Plotting Datat
 xdata = zeros(1,5);
 ydata = zeros(1,5);
 zdata = zeros(1,5);
+kdata = ones(1, 160)*180;
+tdata = zeros(1, 160);
 
-%plot the data
-fig = plot3(xdata,ydata,zdata,'b-o');
+%set up large figure
+figure('Position', [100, 100, 1500, 650])
+
+%plot data in three dimentions
+subplot(1,2,1)
+fig1 = plot3(xdata, ydata, zdata, 'b-o');
 xlabel('x')
 ylabel('y')
 zlabel('z')
-axis([-3, 3, -3, 3, 0, 3])
+axis([-2, 2, -2, 2, -2, 2])
 grid on
-  
+
+%plot knee angle
+subplot(1,2,2)
+fig2 = plot(tdata, kdata, 'r-');
+ylim([-90,90])
+xlabel('t')
+ylabel('knee angle')
 
 
 %%%%%%   Update Data   %%%%%
 
 %set data sources to update graph properly
-fig.XDataSource = 'xdata';
-fig.YDataSource = 'ydata';
-fig.ZDataSource = 'zdata';
+fig1.XDataSource = 'xdata';
+fig1.YDataSource = 'ydata';
+fig1.ZDataSource = 'zdata';
+fig2.XDataSource = 'tdata';
+fig2.YDataSource = 'kdata';
 
 %set Loop to update data
 %loop while running
@@ -126,6 +141,9 @@ while running
     th3 = z1;  %Adjust values with data from RaspPi once angles are isolated
     th2 = x1-90;
     th4 = z2-z1;
+    
+    %Calculate Knee Angle from Above Angle Values
+    knee = th4;
     
     % Reproduce Rotation Matrix Construction
     Ar1 = [cosd(th1) -sind(th1)*cosd(alp1) sind(th1)*sind(alp1) a1*cosd(th1);...
@@ -165,12 +183,15 @@ while running
     % Reproduce Produce Coordinates of points in form readable by plot3
     xdata = [xyz0(1) xyz1(1) xyz2(1) xyz3(1) xyz4(1)];
     ydata = [xyz0(2) xyz1(2) xyz2(2) xyz3(2) xyz4(2)];
-    zdata = [xyz0(3) xyz1(3) xyz2(3) xyz3(3) xyz4(3)];  
+    zdata = [xyz0(3) xyz1(3) xyz2(3) xyz3(3) xyz4(3)];
+    tdata = [tdata(2:length(tdata)), client.get('t') - t0];
+    kdata = [kdata(2:length(kdata)), knee];
     
     %try to update and draw to figure
     try
-        refreshdata(fig, 'caller')
-        drawnow limitrate
+        refreshdata(fig1, 'caller')
+        refreshdata(fig2, 'caller')
+        pause(0.050)
         
     %stop client and loop if figure has been closed
     catch
