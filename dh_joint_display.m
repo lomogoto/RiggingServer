@@ -123,8 +123,8 @@ while running
     z2 = client.get('rt', 2);
     
     th1 = 0;    %Theta1 will always be 0
-    th2 = z1-90;  %Adjust values with data from RaspPi once angles are isolated
-    th3 = x1;
+    th3 = z1;  %Adjust values with data from RaspPi once angles are isolated
+    th2 = x1-90;
     th4 = z2-z1;
     
     % Reproduce Rotation Matrix Construction
