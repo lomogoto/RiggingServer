@@ -2,6 +2,7 @@
 import socket
 import threading
 import json
+import time
 
 #client interface
 class client():
@@ -28,6 +29,7 @@ class client():
     #request data to process and process it constantly
     def process(self):
         while self.running:
+            time.sleep(0.050)
             self.sock.send(self.send_request)
             self.data = json.loads(self.sock.recv(4096).decode())
 
@@ -58,7 +60,6 @@ class client():
 
 #run basic test if main
 if __name__ == '__main__':
-    import time
     c = client()
     c.start()
     try:
