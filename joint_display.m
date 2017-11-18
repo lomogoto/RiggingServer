@@ -34,17 +34,19 @@ ylabel('y')
 zlabel('z')
 axis([-2, 2, -2, 2, -2, 2])
 grid on
+
 %plot knee angle
 subplot(1,2,2)
 fig2 = plot(tdata, kdata, 'r-');
+grid on
 ylim([0,180])
 xlabel('t')
-ylabel('knee angle')
+ylabel('Knee Angle')
 
 %set data sources to update graph properly
 fig1.XDataSource = 'xdata';
-fig1.YDataSource = 'ydata';
-fig1.ZDataSource = 'zdata';
+fig1.ZDataSource = 'ydata';
+fig1.YDataSource = 'zdata';
 fig2.XDataSource = 'tdata';
 fig2.YDataSource = 'kdata';
 
