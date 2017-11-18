@@ -47,11 +47,14 @@ class client():
         #enable the collection
         self.running = True
         self.sock.send(self.start_request)
-        print(self.sock.recv(4096).decode())
+        t0 = float(self.sock.recv(4096).decode())
 
         #start data processing in background
         t = threading.Thread(target = self.process)
         t.start()
+
+        #return start time
+        return t0
 
     #stop the data collections and shut down server
     def stop(self):

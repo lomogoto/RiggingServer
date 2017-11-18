@@ -10,7 +10,7 @@ end
 %import client from python
 client = py.importlib.import_module('client').client();
 
-%start the client and get start time in seconds from epoch
+%start the client and connect to server
 t0 = client.start();
 
 %make unit vector for limbs
@@ -23,21 +23,24 @@ zdata = [0, 0, 0];
 kdata = ones(1, 160)*180;
 tdata = zeros(1, 160);
 
-%set up large figure
-figure('Position', [100, 200, 1500, 750])
+%set up subplots
+subplot(1,2,1)
 
 %plot data in three dimentions
-subplot(1,2,1)
 fig1 = plot3(xdata, ydata, zdata, 'b-o');
 xlabel('x')
 ylabel('y')
 zlabel('z')
 axis([-2, 2, -2, 2, -2, 2])
 grid on
-%plot knee angle
+
+%switch plots
 subplot(1,2,2)
+
+%plot knee angle
 fig2 = plot(tdata, kdata, 'r-');
-ylim([0,180])
+limits = [0,180];
+ylim(limits)
 xlabel('t')
 ylabel('knee angle')
 
