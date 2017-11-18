@@ -46,12 +46,12 @@ while running
     z = client.get('rf', 2)*pi/180;
 
     %calculate rotation matrix for each data value
-    rz = [1, 0, 0; 0, cos(x), -sin(x); 0, sin(x), cos(x)];
+    rx = [1, 0, 0; 0, cos(x), -sin(x); 0, sin(x), cos(x)];
     ry = [cos(y), 0, sin(y); 0, 1, 0; -sin(y), 0, cos(y)];
-    rx = [cos(z), -sin(z), 0; sin(z), cos(z), 0; 0, 0, 1];
+    rz = [cos(z), -sin(z), 0; sin(z), cos(z), 0; 0, 0, 1];
 
     %calculate vector 1
-    v1 = rx*ry*rz*u;
+    v1 = rz*ry*rx*u;
 
     %get data from python client
     x = client.get('rt', 0)*pi/180;
@@ -59,12 +59,12 @@ while running
     z = client.get('rt', 2)*pi/180;
 
     %calculate rotation matrix for each data value
-    rz = [1, 0, 0; 0, cos(x), -sin(x); 0, sin(x), cos(x)];
+    rx = [1, 0, 0; 0, cos(x), -sin(x); 0, sin(x), cos(x)];
     ry = [cos(y), 0, sin(y); 0, 1, 0; -sin(y), 0, cos(y)];
-    rx = [cos(z), -sin(z), 0; sin(z), cos(z), 0; 0, 0, 1];
+    rz = [cos(z), -sin(z), 0; sin(z), cos(z), 0; 0, 0, 1];
 
     %calculate vector 2
-    v2 = rx*ry*rz*u;
+    v2 = rz*ry*rx*u;
 
     %update data
     xdata = [0, v1(1), v2(1)+v1(1)];
