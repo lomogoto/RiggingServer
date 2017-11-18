@@ -149,7 +149,7 @@ class server():
                         read[r] = self.get_register_data(sensor['address'], register, calibration)
     
                     #get angles from acceleration
-                    x = 90 - math.atan2(read['ay'], read['az'])*180/math.pi
+                    x = math.atan2(read['ay'], read['az'])*180/math.pi - 90
                     y = math.atan2(read['ax'], read['az'])*180/math.pi
                     z = 90 - math.atan2(read['ay'], read['ax'])*180/math.pi
     
