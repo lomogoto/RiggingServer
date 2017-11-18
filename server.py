@@ -10,7 +10,7 @@ import smbus
 class server():
     #set configuration variables
     port = 6500
-    alpha = 0.01
+    alpha = 0.005
 
     mpu6050registers = {'ax':0x3B, 'ay':0x3D, 'az':0x3f, 'gx':0x43, 'gy':0x45, 'gz':0x47}
 
