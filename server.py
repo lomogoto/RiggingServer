@@ -10,7 +10,7 @@ import smbus
 class server():
     #set configuration variables
     port = 6500
-    alpha = 0.02
+    alpha = 0.01
 
     mpu6050registers = {'ax':0x3B, 'ay':0x3D, 'az':0x3f, 'gx':0x43, 'gy':0x45, 'gz':0x47}
 
@@ -101,7 +101,7 @@ class server():
                 t.start()
 
                 #confirm start
-                self.sock.send('started'.encode())
+                self.sock.send(str(self.data['t']).encode())
 
             #transmit current data values
             elif command == self.send_request:
@@ -149,9 +149,9 @@ class server():
                         read[r] = self.get_register_data(sensor['address'], register, calibration)
     
                     #get angles from acceleration
-                    x = math.atan2(read['ay'], read['az'])*180/math.pi - 90
+                    x = 90 - math.atan2(read['ay'], read['az'])*180/math.pi
                     y = math.atan2(read['ax'], read['az'])*180/math.pi
-                    z = math.atan2(read['ay'], read['ax'])*180/math.pi - 90
+                    z = 90 - math.atan2(read['ay'], read['ax'])*180/math.pi
     
                     #calculate the impact of gravity on that angle
                     mag = math.sqrt(read['ax']**2 + read['ay']**2 + read['az']**2)
