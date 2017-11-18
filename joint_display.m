@@ -20,11 +20,13 @@ u = [0;1;0];
 xdata = [0, 0, 0];
 ydata = [0, 1, 2];
 zdata = [0, 0, 0];
-kdata = ones(1, 160)*180;
-tdata = zeros(1, 160);
+kdata = 180;
+tdata = 0;
+
+data_log = [0, 180];
 
 %set up large figure
-figure('Position', [100, 200, 1500, 750])
+figure('Position', [100, 200, 1200, 600])
 
 %plot data in three dimentions
 subplot(1,2,1)
@@ -32,14 +34,14 @@ fig1 = plot3(xdata, ydata, zdata, 'b-o');
 xlabel('x')
 ylabel('y')
 zlabel('z')
-axis([-2, 2, -2, 2, -2, 2])
+axis([-2, 2, -2, 2, 0, 4])
 grid on
 
 %plot knee angle
 subplot(1,2,2)
 fig2 = plot(tdata, kdata, 'r-');
 grid on
-ylim([0,180])
+axis([-10, 0, 0,180])
 xlabel('t')
 ylabel('Knee Angle')
 
@@ -47,6 +49,7 @@ ylabel('Knee Angle')
 fig1.XDataSource = 'xdata';
 fig1.ZDataSource = 'ydata';
 fig1.YDataSource = 'zdata';
+
 fig2.XDataSource = 'tdata';
 fig2.YDataSource = 'kdata';
 
@@ -56,7 +59,9 @@ text = uicontrol('Style', 'text', 'HorizontalAlignment', 'left', 'Position', [10
 %loop while running
 running = true;
 while running
+    
     %get data from python client
+    t = client.get('t');
     x = client.get('rf', 0)*pi/180;
     y = client.get('rf', 1)*pi/180;
     z = client.get('rf', 2)*pi/180;
@@ -85,12 +90,15 @@ while running
     %calculate angle of knee from vectors
     knee = 180 - acos(dot(v1,v2)/norm(v1)/norm(v2))*180/pi;
 
+    %add data to log
+    data_log = [data_log; [t-t0, knee]];
+    
     %update data
     xdata = [0, v1(1), v2(1)+v1(1)];
     ydata = [0, v1(2), v2(2)+v1(2)];
     zdata = [0, v1(3), v2(3)+v1(3)];
-    tdata = [tdata(2:length(tdata)), client.get('t') - t0];
-    kdata = [kdata(2:length(kdata)), knee];
+    tdata = data_log(1 + end - min(end, 200):end, 1) - t + t0;
+    kdata = data_log(1 + end - min(end, 200):end, 2);
     
     %try to update and draw to figure
     try
@@ -103,5 +111,6 @@ while running
     catch
         client.stop()
         running = false;
+        disp(data_log);
     end
 end

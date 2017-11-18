@@ -93,7 +93,7 @@ kdata = ones(1, 160)*180;
 tdata = zeros(1, 160);
 
 %set up large figure
-figure('Position', [100, 100, 1500, 650])
+figure('Position', [100, 100, 1200, 600])
 
 %plot data in three dimentions
 subplot(1,2,1)
@@ -101,12 +101,13 @@ fig1 = plot3(xdata, ydata, zdata, 'b-o');
 xlabel('x')
 ylabel('y')
 zlabel('z')
-axis([-2, 2, -2, 2, -2, 2])
+axis([-2, 2, -2, 2, 0, 4])
 grid on
 
 %plot knee angle
 subplot(1,2,2)
 fig2 = plot(tdata, kdata, 'r-');
+grid on
 ylim([-90,90])
 xlabel('t')
 ylabel('knee angle')
@@ -139,7 +140,7 @@ while running
     
     th1 = 0;    %Theta1 will always be 0
     th3 = z1;  %Adjust values with data from RaspPi once angles are isolated
-    th2 = x1-90;
+    th2 = -x1-90;
     th4 = z2-z1;
     
     %Calculate Knee Angle from Above Angle Values
