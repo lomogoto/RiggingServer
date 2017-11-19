@@ -92,9 +92,6 @@ while running
     th2 = -x1-90;
     th4 = z2-z1;
     
-    %Calculate Knee Angle from Above Angle Values
-    knee = th4;
-    
     % Reproduce Rotation Matrix Construction
     Ar1 = [cosd(th1) -sind(th1)*cosd(alp1) sind(th1)*sind(alp1) a1*cosd(th1);...
           sind(th1) cosd(th1)*cosd(alp1) -cosd(th1)*sind(alp1) a1*sind(th1);...
@@ -129,13 +126,21 @@ while running
     xyz2 = [o2(1,4) o2(2,4) o2(3,4)];
     xyz3 = [o3(1,4) o3(2,4) o3(3,4)];
     xyz4 = [o4(1,4) o4(2,4) o4(3,4)];
+    
+    %Calculate Knee Angle from Above Angle Values
+    knee = th4;
+    
+    %add data to log
+    data_log = [data_log; [t-t0, knee]];
 
     % Reproduce Produce Coordinates of points in form readable by plot3
     xdata = [xyz0(1) xyz1(1) xyz2(1) xyz3(1) xyz4(1)];
     ydata = [xyz0(2) xyz1(2) xyz2(2) xyz3(2) xyz4(2)];
     zdata = [xyz0(3) xyz1(3) xyz2(3) xyz3(3) xyz4(3)];
-    tdata = [tdata(2:length(tdata)), client.get('t') - t0];
-    kdata = [kdata(2:length(kdata)), knee];
+    
+    %update knee plot data
+    tdata = data_log(1 + end - min(end, 200):end, 1) - t + t0;
+    kdata = data_log(1 + end - min(end, 200):end, 2);
     
     %try to update and draw to figure
     try
