@@ -31,7 +31,7 @@ grid on
 subplot(1,2,2)
 fig2 = plot(tdata, kdata, 'r-');
 grid on
-axis([-10, 0, 0, 90])
+axis([-10, 0, -100, 100])
 xlabel('t - t_f')
 ylabel('Knee Angle')
 
