@@ -12,14 +12,16 @@ class server():
     port = 6500
     alpha = 0.005
 
-    mpu6050registers = {'ax':0x3B, 'ay':0x3D, 'az':0x3f, 'gx':0x43, 'gy':0x45, 'gz':0x47}
+    mpu6050 = {'power':0x6B, 'a_conf':0x1B, 'g_conf':0x1C,
+        'ax':(0x3B,0x3C), 'ay':(0x3D,0x3E), 'az':(0x3f,0x40),
+        'gx':(0x43,0x44), 'gy':(0x45,0x46), 'gz':(0x47,0x48),
+    bno055 = {'power':
+        'mx':(0xF,0xE), 'my':(0x11,0x10), 'mz':(0x13,0x12),
+        'ax':(0x9,0x8), 'ay':(0xB,0xA),'az':(0xD,0xC),
+        'gx':(0x15,0x14), 'gx':(0x17,0x16),'gx':(0x19,0x18)}
 
-    sensors = {'rf': {'address':0x68, 'registers':mpu6050registers, 'calibrations':{'gx':0, 'gy':0, 'gz':0}},
-        'rt': {'address':0x69, 'registers':mpu6050registers, 'calibrations':{'gx':0, 'gy':0, 'gz':0}}}
-
-    power = 0x6B
-    a_conf = 0x1B
-    g_conf = 0x1C
+    sensors = {'rf': {'address':0x68, 'registers':mpu6050, 'calibrations':{'gx':0, 'gy':0, 'gz':0}},
+        'rt': {'address':0x69, 'registers':mpu6050, 'calibrations':{'gx':0, 'gy':0, 'gz':0}}}
 
     n = 100
 
@@ -56,13 +58,16 @@ class server():
     #initialize a sensor
     def init_sensor(self, sensor):
         #wake sensor
-        self.bus.write_byte_data(sensor['address'], self.power, 0x00)
+        self.bus.write_byte_data(sensor['address'], sensor['register']['power'], 0x00)
 
         #set ranges to 250 deg/s
-        self.bus.write_byte_data(sensor['address'], self.g_conf, 0x00)
+        self.bus.write_byte_data(sensor['address'], sensor['register']['g_conf'], 0x00)
 
         #set accel ranges to  m/s/s
-        self.bus.write_byte_data(sensor['address'], self.a_conf, 0x00)
+        self.bus.write_byte_data(sensor['address'], sensor['register']['a_conf'], 0x00)
+
+        #set mag ranges to  ##############
+        self.bus.write_byte_data(sensor['address'], sensor['register']['m_conf'], 0x00)
 
         #loop over registers to calibrate
         for c in sensor['calibrations']:
@@ -177,8 +182,8 @@ class server():
     #read short using sensor address and register address
     def get_register_data(self, address, register, calibration = 0):
         #get high and low bytes
-        h = self.bus.read_byte_data(address, register)
-        l = self.bus.read_byte_data(address, register + 1)
+        h = self.bus.read_byte_data(address, register[0])
+        l = self.bus.read_byte_data(address, register[1])
 
         #move high byte up 8 digits and add low byte
         value = (h << 8) + l
