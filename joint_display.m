@@ -79,10 +79,10 @@ while running
     rz2 = [cosd(z2), -sind(z2), 0; sind(z2), cosd(z2), 0; 0, 0, 1];
 
     %calculate vector 1
-    v1 = rz1*ry1*rx1*u;
+    v1 = rx1*rz1*u;
 
     %calculate vector 2
-    v2 = rz2*ry2*rx2*u;
+    v2 = rx2*rz2*u;
     
     %calculate angle of knee from vectors
     knee = acosd(dot(v1,v2)/norm(v1)/norm(v2));
