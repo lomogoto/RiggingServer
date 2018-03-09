@@ -12,17 +12,23 @@ class server():
     port = 6500
     alpha = 0.005
 
+    #collected data register names
+    r_names = ('ax', 'ay', 'az', 'gx', 'gy', 'gz')
+
+    #sensor spesific registers
     mpu6050 = {'power':0x6B, 'a_conf':0x1B, 'g_conf':0x1C,
         'ax':(0x3B,0x3C), 'ay':(0x3D,0x3E), 'az':(0x3f,0x40),
-        'gx':(0x43,0x44), 'gy':(0x45,0x46), 'gz':(0x47,0x48),
-    bno055 = {'power':
+        'gx':(0x43,0x44), 'gy':(0x45,0x46), 'gz':(0x47,0x48)}
+    bno055 = {
         'mx':(0xF,0xE), 'my':(0x11,0x10), 'mz':(0x13,0x12),
         'ax':(0x9,0x8), 'ay':(0xB,0xA),'az':(0xD,0xC),
         'gx':(0x15,0x14), 'gx':(0x17,0x16),'gx':(0x19,0x18)}
 
+    #build sensors
     sensors = {'rf': {'address':0x68, 'registers':mpu6050, 'calibrations':{'gx':0, 'gy':0, 'gz':0}},
         'rt': {'address':0x69, 'registers':mpu6050, 'calibrations':{'gx':0, 'gy':0, 'gz':0}}}
 
+    #number of times to poll data when calibrating
     n = 100
 
     #initialize the server
@@ -58,16 +64,16 @@ class server():
     #initialize a sensor
     def init_sensor(self, sensor):
         #wake sensor
-        self.bus.write_byte_data(sensor['address'], sensor['register']['power'], 0x00)
+        self.bus.write_byte_data(sensor['address'], sensor['registers']['power'], 0x00)
 
         #set ranges to 250 deg/s
-        self.bus.write_byte_data(sensor['address'], sensor['register']['g_conf'], 0x00)
+        self.bus.write_byte_data(sensor['address'], sensor['registers']['g_conf'], 0x00)
 
         #set accel ranges to  m/s/s
-        self.bus.write_byte_data(sensor['address'], sensor['register']['a_conf'], 0x00)
+        self.bus.write_byte_data(sensor['address'], sensor['registers']['a_conf'], 0x00)
 
         #set mag ranges to  ##############
-        self.bus.write_byte_data(sensor['address'], sensor['register']['m_conf'], 0x00)
+        #self.bus.write_byte_data(sensor['address'], sensor['registers']['m_conf'], 0x00)
 
         #loop over registers to calibrate
         for c in sensor['calibrations']:
@@ -118,13 +124,12 @@ class server():
             else:
                 listening = False
                 self.running = False
-                self.sock.send(''.encode())
+                self.sock.send('{}'.encode())
 
     #read from sensors and integrate on a loop
     def process(self):
-
+        #attempt to process requests
         try:
-
             #loop until server is shut down
             while self.running:
                 #start by reading time and change in time
@@ -141,7 +146,7 @@ class server():
                     read = {}
     
                     #loop over registers
-                    for r in sensor['registers']:
+                    for r in self.r_names:
                         #pick a register by name
                         register = sensor['registers'][r]
     
@@ -169,6 +174,7 @@ class server():
                     self.data[s][1] = (1 - self.alpha * yMag) * (self.data[s][1] + read['gy']/131.072 * dt) + self.alpha * yMag * y
                     self.data[s][2] = (1 - self.alpha * zMag) * (self.data[s][2] + read['gz']/131.072 * dt) + self.alpha * zMag * z
 
+        #print out any errors from requests
         except Exception as e:
             print(e)
 

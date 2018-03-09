@@ -69,5 +69,8 @@ if __name__ == '__main__':
         while True:
             time.sleep(0.5)
             print(c.data)
+    except KeyboardInterrupt:
+        pass
     finally:
         c.stop()
+        print()
