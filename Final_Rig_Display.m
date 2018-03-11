@@ -11,7 +11,7 @@ zdata = [-.25, -.25, -.25, .25, .25, .25];
 data_log = [0, 180];
 
 %set up large figure
-figure('Position', [200, 200, 800, 800])
+figure('Position', [200, 200, 600, 600])
 
 %plot data in three dimentions
 subplot(1,1,1)
