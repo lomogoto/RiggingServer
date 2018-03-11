@@ -67,7 +67,7 @@ while running
     v1 = rx1*rz1*[0;1;0];
 
     %calculate vector 2
-    v2 = rx2*rz2*[0;-1;0];
+    v2 = rx2*rz2*[0;1;0];
        
     %update 3D plot data
     xdata = [0, 0, 0, 0, v1(1), v2(1)+v1(1)];
