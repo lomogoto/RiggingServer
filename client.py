@@ -47,7 +47,9 @@ class client():
         #enable the collection
         self.running = True
         self.sock.send(self.start_request)
-        t0 = float(self.sock.recv(4096).decode())
+        t_string = self.sock.recv(4096).decode()
+        print('t: ' + t_string)
+        t0 = float(t)
 
         #start data processing in background
         t = threading.Thread(target = self.process)
