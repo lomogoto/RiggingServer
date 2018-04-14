@@ -49,7 +49,7 @@ class client():
         self.sock.send(self.start_request)
         t_string = self.sock.recv(4096).decode()
         print('t: ' + t_string)
-        t0 = float(t)
+        t0 = float(t_string)
 
         #start data processing in background
         t = threading.Thread(target = self.process)
