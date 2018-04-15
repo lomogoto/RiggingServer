@@ -75,6 +75,7 @@ t0 = client.start();
 %loop while running
 running = true;
 while running
+    t = client.get('t');
     %get Femur data from python client
     %Femur Data is pulled from Lower IMU Sensor, with Red LED
     x1 = client.get('rf', 0);
