@@ -10,23 +10,7 @@ import smbus
 class server():
     #set configuration variables
     port = 6500
-    alpha = 0.005
-
-    #collected data register names
-    r_names = ('ax', 'ay', 'az', 'gx', 'gy', 'gz')
-
-    #sensor spesific registers
-    mpu6050 = {'power':0x6B, 'a_conf':0x1B, 'g_conf':0x1C,
-        'ax':(0x3B,0x3C), 'ay':(0x3D,0x3E), 'az':(0x3f,0x40),
-        'gx':(0x43,0x44), 'gy':(0x45,0x46), 'gz':(0x47,0x48)}
-    bno055 = {
-        'mx':(0xF,0xE), 'my':(0x11,0x10), 'mz':(0x13,0x12),
-        'ax':(0x9,0x8), 'ay':(0xB,0xA),'az':(0xD,0xC),
-        'gx':(0x15,0x14), 'gx':(0x17,0x16),'gx':(0x19,0x18)}
-
-    #build sensors
-    sensors = {'rf': {'address':0x68, 'registers':mpu6050, 'calibrations':{'gx':0, 'gy':0, 'gz':0}},
-        'rt': {'address':0x69, 'registers':mpu6050, 'calibrations':{'gx':0, 'gy':0, 'gz':0}}}
+    alpha = 0 #0.005
 
     #number of times to poll data when calibrating
     n = 100
@@ -44,11 +28,9 @@ class server():
 
         #make new socket accepting a connection
         self.sock, addr = s.accept()
-
+    
         #sensor data
         self.data = {'t' : 0}
-        for s in self.sensors:
-            self.data[s] = [0, 0, 0]
 
         #start with no data collection active
         self.running = False
@@ -60,34 +42,6 @@ class server():
 
         #start listening for commands
         self.listen()
-
-    #initialize a sensor
-    def init_sensor(self, sensor):
-        #wake sensor
-        self.bus.write_byte_data(sensor['address'], sensor['registers']['power'], 0x00)
-
-        #set ranges to 250 deg/s
-        self.bus.write_byte_data(sensor['address'], sensor['registers']['g_conf'], 0x00)
-
-        #set accel ranges to  m/s/s
-        self.bus.write_byte_data(sensor['address'], sensor['registers']['a_conf'], 0x00)
-
-        #set mag ranges to  ##############
-        #self.bus.write_byte_data(sensor['address'], sensor['registers']['m_conf'], 0x00)
-
-        #loop over registers to calibrate
-        for c in sensor['calibrations']:
-            #pick by name
-            register = sensor['registers'][c]
-
-            #average first readings
-            sum = 0
-            for i in range(self.n):
-                sum += self.get_register_data(sensor['address'], register)
-            average = sum / self.n
-
-            #save calibration
-            sensor['calibrations'][c] = average
 
     #accept commands
     def listen(self):
@@ -101,10 +55,15 @@ class server():
             if command == self.start_request:
                 #enable polling
                 self.running = True
+        
+                #build sensors
+                self.sensors = {'rf': self.init_bno055(0x28)} #,
+                    #'lf': self.init_mpu6050(0x68)}
 
-                #initialize sensors
+                #initialize the sensor data
                 for s in self.sensors:
-                    self.init_sensor(self.sensors[s])
+                    self.calibrate(self.sensors[s])
+                    self.data[s] = [0, 0, 0]
 
                 #start processing thread
                 self.data['t'] = time.time()
@@ -126,6 +85,64 @@ class server():
                 self.running = False
                 self.sock.send('{}'.encode())
 
+    #initialize bno055 sensor
+    def init_bno055(self, address):
+        #sensor register data
+        bno055 = {
+            'mx':(0xF,  0xE), 'my':(0x11,0x10), 'mz':(0x13,0x12),
+            'ax':(0x9,  0x8), 'ay':(0xB,  0xA), 'az':(0xD,0xC),
+            'gx':(0x15,0x14), 'gy':(0x17,0x16), 'gz':(0x19,0x18)}
+
+        #set gyro rage to 125 deg/s
+        self.bus.write_byte_data(address, 0x0A, 0x4)
+
+        #enable all sensors without fusion
+        self.bus.write_byte_data(address, 0x3D, 0x7)
+
+        #make dictionary for sensor
+        sensor = {'address':address, 'registers':bno055, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':125}
+
+        #return the sensor dictionary
+        return sensor
+
+    #initialize an mpu6050 sensor
+    def init_mpu6050(self, address):
+        #sensor register data
+        mpu6050 = {
+            'ax':(0x3B,0x3C), 'ay':(0x3D,0x3E), 'az':(0x3f,0x40),
+            'gx':(0x43,0x44), 'gy':(0x45,0x46), 'gz':(0x47,0x48)}
+
+        #wake sensor
+        self.bus.write_byte_data(address, 0x6B, 0x00)
+
+        #set ranges to 250 deg/s
+        self.bus.write_byte_data(address, 0x1C, 0x00)
+
+        #set accel ranges to  m/s/s
+        self.bus.write_byte_data(address, 0x1B, 0x00)
+
+        #make dictionary for sensor
+        sensor = {'address':address, 'registers':mpu6050, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':250}
+
+        #return the sensor dictionary
+        return sensor
+
+    #calibrate a sensor
+    def calibrate(self, sensor):
+        #loop over registers to calibrate
+        for c in sensor['calibrations']:
+            #pick by name
+            register = sensor['registers'][c]
+
+            #average first readings
+            total = 0
+            for i in range(self.n):
+                total += self.get_register_data(sensor['address'], register)
+            average = total / self.n
+
+            #save calibration
+            sensor['calibrations'][c] = average
+
     #read from sensors and integrate on a loop
     def process(self):
         #attempt to process requests
@@ -146,7 +163,7 @@ class server():
                     read = {}
     
                     #loop over registers
-                    for r in self.r_names:
+                    for r in sensor['registers']:
                         #pick a register by name
                         register = sensor['registers'][r]
     
@@ -169,10 +186,13 @@ class server():
                     yMag = 0 #math.sqrt(read['ax']**2 + read['az']**2) / mag
                     zMag = 1 #math.sqrt(read['ay']**2 + read['ax']**2) / mag
     
+                    #range factor
+                    scale = sensor['range']*2**-15
+
                     #update data for sensor
-                    self.data[s][0] = (1 - self.alpha * xMag) * (self.data[s][0] + read['gx']/131.072 * dt) + self.alpha * xMag * x
-                    self.data[s][1] = (1 - self.alpha * yMag) * (self.data[s][1] + read['gy']/131.072 * dt) + self.alpha * yMag * y
-                    self.data[s][2] = (1 - self.alpha * zMag) * (self.data[s][2] + read['gz']/131.072 * dt) + self.alpha * zMag * z
+                    self.data[s][0] = (1 - self.alpha * xMag) * (self.data[s][0] + read['gx']*scale * dt) + self.alpha * xMag * x
+                    self.data[s][1] = (1 - self.alpha * yMag) * (self.data[s][1] + read['gy']*scale * dt) + self.alpha * yMag * y
+                    self.data[s][2] = (1 - self.alpha * zMag) * (self.data[s][2] + read['gz']*scale * dt) + self.alpha * zMag * z
 
         #print out any errors from requests
         except Exception as e:
