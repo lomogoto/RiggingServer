@@ -48,9 +48,9 @@ while running
     x1 = client.get('rf', 0);
     y1 = client.get('rf', 1);
     z1 = client.get('rf', 2);
-    x2 = client.get('rt', 0);
-    y2 = client.get('rt', 1);
-    z2 = client.get('rt', 2);
+    x2 = client.get('lf', 0);
+    y2 = client.get('lf', 1);
+    z2 = client.get('lf', 2);
 
     %calculate rotation matrix for each data value
     rx1 = [1, 0, 0; 0, cosd(x1), -sind(x1); 0, sind(x1), cosd(x1)];
@@ -64,15 +64,15 @@ while running
 
     
     %calculate vector 1
-    v1 = rx1*rz1*[0;1;0];
+    lfv = rx1*rz1*[0;1;0];
 
     %calculate vector 2
-    v2 = rx1*rz2*[0;1;0];
+    rfv = rx1*rz2*[0;1;0];
        
     %update 3D plot data
-    xdata = [0, 0, 0, 0, v1(1), v2(1)+v1(1)];
-    ydata = [0, 1, 2, 2, 2-v1(2), 2-v2(2)-v1(2)];
-    zdata = [.25, .25, .25, -.25, -.25+v1(3), -.25+v2(3)+v1(3)];
+    xdata = [0, 0, 0, 0, lfv(1), rfv(1)+lfv(1)];
+    ydata = [0, 1, 2, 2, 2-lfv(2), 2-rfv(2)-lfv(2)];
+    zdata = [.25, .25, .25, -.25, -.25+lfv(3), -.25+rfv(3)+lfv(3)];
 
     
     %try to update and draw to figure
