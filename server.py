@@ -10,7 +10,7 @@ import smbus
 class server():
     #set configuration variables
     port = 6500
-    alpha = 0 #0.005
+    alpha = 0#.005
 
     #number of times to poll data when calibrating
     n = 100
@@ -57,8 +57,11 @@ class server():
                 self.running = True
         
                 #build sensors
-                self.sensors = {'rf': self.init_bno055(0x28)} #,
-                    #'lf': self.init_mpu6050(0x68)}
+                self.sensors = {
+                    'rf': self.init_mpu6051(0x68),
+                    'lf': self.init_mpu6051(0x69),
+                    'rt':self.init_alt10(0x1D, 0x6B),
+                    'lt':self.init_alt10(0x1E, 0x6A)}
 
                 #initialize the sensor data
                 for s in self.sensors:
@@ -85,22 +88,55 @@ class server():
                 self.running = False
                 self.sock.send('{}'.encode())
 
+    #initialize alt10 sensor
+    def init_alt10(self, addr_am, addr_g):
+        #sensor rergister data
+        registers = {
+            'mx':(0x9,  0x8),  'my':(0xB,  0xA),  'mz':(0xC,  0xD),
+            'ax':(0x29, 0x28), 'ay':(0x2B, 0x2A), 'az':(0x2D, 0x2C),
+            'gx':(0x29, 0x28), 'gy':(0x2B, 0x2A), 'gz':(0x2D, 0x2C)}
+
+        #power on gyro
+        self.bus.write_byte_data(addr_g, 0x20, 0b1111)
+        
+        #power on accelerometer and magnetometer
+        self.bus.write_byte_data(addr_am, 0x20, 0b10100111)
+        self.bus.write_byte_data(addr_am, 0x24, 0b01110100)
+        self.bus.write_byte_data(addr_am, 0x26, 0b00000000)
+
+        #use three addresses, one for each sensor
+        addresses = {addr_am:('ax', 'ay', 'az', 'mx', 'my', 'mz'),
+            addr_g:('gx', 'gy', 'gz')}
+
+        #make dictionary for sensor
+        sensor = {'addresses':addresses, 'registers':registers, 'cal_address':addr_g, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':245}
+
+        #return the sensor dictionary
+        return sensor
+
     #initialize bno055 sensor
     def init_bno055(self, address):
         #sensor register data
-        bno055 = {
-            'mx':(0xF,  0xE), 'my':(0x11,0x10), 'mz':(0x13,0x12),
-            'ax':(0x9,  0x8), 'ay':(0xB,  0xA), 'az':(0xD,0xC),
-            'gx':(0x15,0x14), 'gy':(0x17,0x16), 'gz':(0x19,0x18)}
+        registers = {
+            'mx':(0xF,  0xE),  'my':(0x11, 0x10), 'mz':(0x13, 0x12),
+            'ax':(0x9,  0x8),  'ay':(0xB,  0xA),  'az':(0xD,  0xC),
+            'gx':(0x15, 0x14), 'gy':(0x17, 0x16), 'gz':(0x18, 0x19)}
 
-        #set gyro rage to 125 deg/s
-        self.bus.write_byte_data(address, 0x0A, 0x4)
+        #set gyro range to 125 deg/s
+        self.bus.write_byte_data(address, 0xA, 0b00000100)
+
+        #set normal power mode
+        self.bus.write_byte_data(address, 0x3E, 0x0)
 
         #enable all sensors without fusion
         self.bus.write_byte_data(address, 0x3D, 0x7)
+        time.sleep(0.3)
+
+        #make addresses
+        addresses = {address:('ax', 'ay', 'az', 'gx', 'gy', 'gz', 'mx', 'my', 'mz')}
 
         #make dictionary for sensor
-        sensor = {'address':address, 'registers':bno055, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':125}
+        sensor = {'addresses':addresses, 'registers':registers, 'cal_address':address, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':2000}
 
         #return the sensor dictionary
         return sensor
@@ -108,9 +144,9 @@ class server():
     #initialize an mpu6050 sensor
     def init_mpu6050(self, address):
         #sensor register data
-        mpu6050 = {
-            'ax':(0x3B,0x3C), 'ay':(0x3D,0x3E), 'az':(0x3f,0x40),
-            'gx':(0x43,0x44), 'gy':(0x45,0x46), 'gz':(0x47,0x48)}
+        registers = {
+            'ax':(0x3B, 0x3C), 'ay':(0x3D, 0x3E), 'az':(0x3f, 0x40),
+            'gx':(0x43, 0x44), 'gy':(0x45, 0x46), 'gz':(0x47, 0x48)}
 
         #wake sensor
         self.bus.write_byte_data(address, 0x6B, 0x00)
@@ -121,8 +157,11 @@ class server():
         #set accel ranges to  m/s/s
         self.bus.write_byte_data(address, 0x1B, 0x00)
 
+        #make addresses
+        addresses = {address:('ax', 'ay', 'az', 'gx', 'gy', 'gz')}
+
         #make dictionary for sensor
-        sensor = {'address':address, 'registers':mpu6050, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':250}
+        sensor = {'addresses':addresses, 'registers':registers, 'cal_address': address, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':250}
 
         #return the sensor dictionary
         return sensor
@@ -137,11 +176,12 @@ class server():
             #average first readings
             total = 0
             for i in range(self.n):
-                total += self.get_register_data(sensor['address'], register)
+                total += self.get_register_data(sensor['cal_address'], register)
             average = total / self.n
 
             #save calibration
             sensor['calibrations'][c] = average
+            #print(average)
 
     #read from sensors and integrate on a loop
     def process(self):
@@ -161,19 +201,21 @@ class server():
     
                     #dictionary of sensor reading
                     read = {}
-    
-                    #loop over registers
-                    for r in sensor['registers']:
-                        #pick a register by name
-                        register = sensor['registers'][r]
-    
-                        try:
-                            calibration = sensor['calibrations'][r]
-                        except:
-                            calibration = 0
-    
-                        #read each register for sensor
-                        read[r] = self.get_register_data(sensor['address'], register, calibration)
+
+                    #loop over addresses
+                    for address in sensor['addresses']:
+                        #loop over registers
+                        for r in sensor['addresses'][address]:
+                            #pick a register by name
+                            register = sensor['registers'][r]
+        
+                            try:
+                                calibration = sensor['calibrations'][r]
+                            except:
+                                calibration = 0
+        
+                            #read each register for sensor
+                            read[r] = self.get_register_data(address, register, calibration)
     
                     #get angles from acceleration
                     x = math.atan2(read['ay'], read['az'])*180/math.pi - 90
@@ -181,7 +223,7 @@ class server():
                     z = 90 - math.atan2(read['ay'], read['ax'])*180/math.pi
     
                     #calculate the impact of gravity on that angle
-                    mag = math.sqrt(read['ax']**2 + read['ay']**2 + read['az']**2)
+                    #mag = math.sqrt(read['ax']**2 + read['ay']**2 + read['az']**2)
                     xMag = 1 #math.sqrt(read['ay']**2 + read['az']**2) / mag
                     yMag = 0 #math.sqrt(read['ax']**2 + read['az']**2) / mag
                     zMag = 1 #math.sqrt(read['ay']**2 + read['ax']**2) / mag
@@ -196,7 +238,7 @@ class server():
 
         #print out any errors from requests
         except Exception as e:
-            print(e)
+            print('Error: ' + str(e))
 
     #pack data into one dictionary for json dump
     def pack(self):
@@ -205,7 +247,7 @@ class server():
         #return data encoded into a string
         return json.dumps(data, separators = (',', ':'))
 
-    #read short using sensor address and register address
+    #read short using sensor address and register address (high, low)
     def get_register_data(self, address, register, calibration = 0):
         #get high and low bytes
         h = self.bus.read_byte_data(address, register[0])
