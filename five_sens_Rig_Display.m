@@ -40,8 +40,7 @@ t0 = client.start();
 
 %initialize data for data recording, add titles to columns
 row_count = 1;
-syms time rfemurx rfemury rfemurz lfemurx lfemury lfemurz rtibiax rtibiay rtibiaz ltibiax ltibiay ltibiaz torsox torsoy torsoz
-data_matrix = [' ' , time, rfemurx, rfemury, rfemurz, lfemurx, lfemury, lfemurz, rtibiax, rtibiay, rtibiaz, ltibiax, ltibiay, ltibiaz, torsox, torsoy, torsoz];
+data_matrix = [' ' , 'time', 'rfemurx', 'rfemury', 'rfemurz', 'lfemurx', 'lfemury', 'lfemurz', 'rtibiax', 'rtibiay', 'rtibiaz', 'ltibiax', 'ltibiay', 'ltibiaz', 'torsox', 'torsoy', 'torsoz'];
 
 %loop while running
 running = true;
