@@ -10,7 +10,7 @@ import smbus
 class server():
     #set configuration variables
     port = 6500
-    alpha = 0#.005
+    alpha = 1#.005
 
     #number of times to poll data when calibrating
     n = 100
@@ -58,10 +58,10 @@ class server():
         
                 #build sensors
                 self.sensors = {
-                    'rf': self.init_mpu6051(0x68),
-                    'lf': self.init_mpu6051(0x69),
-                    'rt':self.init_alt10(0x1D, 0x6B),
-                    'lt':self.init_alt10(0x1E, 0x6A)}
+                    #'rf': self.init_mpu6051(0x68),
+                    #'lf': self.init_mpu6051(0x69),
+                    'rt':self.init_alt10(0x1D, 0x6B)}
+                    #'lt':self.init_alt10(0x1E, 0x6A)}
 
                 #initialize the sensor data
                 for s in self.sensors:
@@ -78,7 +78,6 @@ class server():
 
             #transmit current data values
             elif command == self.send_request:
-
                 #pack the data in the json standard format with no whitespace
                 self.sock.send(self.pack().encode())
 
@@ -217,24 +216,58 @@ class server():
                             #read each register for sensor
                             read[r] = self.get_register_data(address, register, calibration)
     
+                    #get sensor vectors
+                    a = [read['ax'], read['ay'], read['az']]
+                    m = [read['mx'], read['my'], read['mz']]
+
+                    #get basis vectors
+                    norm_a = math.sqrt(a[0]**2 + a[1]**2 + a[2]**2)
+                    z = [a[i]/norm_a for i in range(3)]
+                    z_dot_m = sum([z[i]*m[i] for i in range(3)])
+                    x = [m[i]-z[i]*z_dot_m for i in range(3)]
+                    norm_x = math.sqrt(x[0]**2 + x[1]**2 + x[2]**2)
+                    x = [x[i]/norm_x for i in range(3)]
+                    y = [z[i-2]*x[i-1]-z[i-1]*x[i-2] for i in range(3)]
+
+                    #make basis
+                    R = [x, y, z]
+
+                    #find euler angles
+                    euler = [0,0,0]
+                    sy = math.sqrt(R[0][0]**2 + R[1][1]**2)
+                    euler[1] = math.degrees(math.atan2(-R[2][0], sy))
+                    if sy > 1e-6:
+                        euler[0] = math.degrees(math.atan2(R[2][1], R[2][2]))
+                        euler[2] = math.degrees(math.atan2(R[1][0], R[0][0]))
+                    else:
+                        euler[0] = math.degrees(math.atan2(-R[1][2], R[1][1]))
+                        euler[2] = 0
+
+                    #adjust for full rotations
+                    for i in range(3):
+                        while self.data[s][i]-euler[i] > 180:
+                            euler[i] += 360
+                        while self.data[s][i]-euler[i] < -180:
+                            euler[i] -= 360
+
                     #get angles from acceleration
-                    x = math.atan2(read['ay'], read['az'])*180/math.pi - 90
-                    y = math.atan2(read['ax'], read['az'])*180/math.pi
-                    z = 90 - math.atan2(read['ay'], read['ax'])*180/math.pi
+                    #x = math.atan2(read['ay'], read['az'])*180/math.pi - 90
+                    #y = math.atan2(read['ax'], read['az'])*180/math.pi
+                    #z = 90 - math.atan2(read['ay'], read['ax'])*180/math.pi
     
                     #calculate the impact of gravity on that angle
                     #mag = math.sqrt(read['ax']**2 + read['ay']**2 + read['az']**2)
-                    xMag = 1 #math.sqrt(read['ay']**2 + read['az']**2) / mag
-                    yMag = 0 #math.sqrt(read['ax']**2 + read['az']**2) / mag
-                    zMag = 1 #math.sqrt(read['ay']**2 + read['ax']**2) / mag
+                    #xMag = 1 #math.sqrt(read['ay']**2 + read['az']**2) / mag
+                    #yMag = 0 #math.sqrt(read['ax']**2 + read['az']**2) / mag
+                    #zMag = 1 #math.sqrt(read['ay']**2 + read['ax']**2) / mag
     
                     #range factor
                     scale = sensor['range']*2**-15
 
                     #update data for sensor
-                    self.data[s][0] = (1 - self.alpha * xMag) * (self.data[s][0] + read['gx']*scale * dt) + self.alpha * xMag * x
-                    self.data[s][1] = (1 - self.alpha * yMag) * (self.data[s][1] + read['gy']*scale * dt) + self.alpha * yMag * y
-                    self.data[s][2] = (1 - self.alpha * zMag) * (self.data[s][2] + read['gz']*scale * dt) + self.alpha * zMag * z
+                    self.data[s][0] = (1 - self.alpha) * (self.data[s][0] + read['gx']*scale * dt) + self.alpha * euler[0]
+                    self.data[s][1] = (1 - self.alpha) * (self.data[s][1] + read['gy']*scale * dt) + self.alpha * euler[1]
+                    self.data[s][2] = (1 - self.alpha) * (self.data[s][2] + read['gz']*scale * dt) + self.alpha * euler[2]
 
         #print out any errors from requests
         except Exception as e:
