@@ -214,45 +214,7 @@ class server():
         
                             #read each register for sensor
                             read[r] = self.get_register_data(address, register, calibration)
-                    '''
-                    #get sensor vectors
-                    a = [read['ax'], read['ay'], read['az']]
-                    try:
-                    	m = [read['mx'], read['my'], read['mz']]
-                    except:
-                        m = [1, 1, 1]
 
-                    #get basis vectors
-                    norm_a = math.sqrt(a[0]**2 + a[1]**2 + a[2]**2)
-                    z = [-a[i]/norm_a for i in range(3)]
-                    z_dot_m = sum([z[i]*m[i] for i in range(3)])
-                    x = [m[i]-z[i]*z_dot_m for i in range(3)]
-                    norm_x = math.sqrt(x[0]**2 + x[1]**2 + x[2]**2)
-                    x = [x[i]/norm_x for i in range(3)]
-                    y = [z[i-2]*x[i-1]-z[i-1]*x[i-2] for i in range(3)]
-
-                    #make basis
-                    R = [x, y, z]
-
-                    #find euler angles
-                    euler = [0,0,0]
-                    sy = math.sqrt(R[2][1]**2 + R[2][2]**2)
-                    euler[1] = math.degrees(math.atan2(-R[2][0], sy))
-                    if sy > 1e-6:
-                        euler[0] = math.degrees(math.atan2(R[2][1], R[2][2]))
-                        euler[2] = math.degrees(math.atan2(R[1][0], R[0][0]))
-                    else:
-                        euler[0] = math.degrees(math.atan2(-R[1][2], R[1][1]))
-                        euler[2] = 0
-
-                    #adjust for full rotations
-                    for i in range(3):
-                        while self.data[s][i]-euler[i] > 180:
-                            self.data[s][i] -= 360
-                        while self.data[s][i]-euler[i] < -180:
-                            self.data[s][i] += 360
-
-                    '''
                     #get gyro data
                     g = [read['gx'], read['gy'], read['gz']]
 
@@ -306,4 +268,10 @@ class server():
         return value - calibration
 
 #start a new server object
-server()
+clean_stop = False
+while not clean_stop:
+    try:
+        server()
+        clean_stop = True
+    except Exception as e:
+        print('Error: ' + str(e))
