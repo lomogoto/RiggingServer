@@ -5,12 +5,15 @@ import json
 import time
 import math
 import smbus
+import Adafruit_ADS1x15
 
 #rigging data server
 class server():
     #set configuration variables
     port = 6500
     alpha = 0.01
+    gain = 2/3
+    down = 10000
 
     #number of times to poll data when calibrating
     n = 100
@@ -63,10 +66,19 @@ class server():
                     'lf':self.init_mpu6050(0x69),
                     'lt':self.init_alt10(0x1E, 0x6A)}
 
+                #add analog sensors
+                self.analogs = {
+                    'rp':Adafruit_ADS1x15.ADS1115(address=0x49),
+                    'lp':Adafruit_ADS1x15.ADS1115(address=0x48)}
+
                 #initialize the sensor data
                 for s in self.sensors:
                     self.calibrate(self.sensors[s])
                     self.data[s] = [0, 0, 0]
+
+                #initialize analog data
+                for a in self.analogs:
+                    self.data[a] = [0, 0, 0, 0]
 
                 #start processing thread
                 self.data['t'] = time.time()
@@ -191,6 +203,11 @@ class server():
                 t = time.time()
                 dt = t - self.data['t']
                 self.data['t'] = t
+
+                for a in self.analogs:
+                    analog = self.analogs[a]
+                    for i in range(4):
+                        self.data[a][i] = analog.read_adc(i, gain = self.gain)# > self.down)
     
                 #loop over sensors and registers to get readings for each
                 for s in self.sensors:
