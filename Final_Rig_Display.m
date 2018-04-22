@@ -45,33 +45,52 @@ while running
     
     %get data from python client
     t = client.get('t');
-    x1 = client.get('rf', 0);
-    y1 = client.get('rf', 1);
-    z1 = client.get('rf', 2);
-    x2 = client.get('rt', 0);
-    y2 = client.get('rt', 1);
-    z2 = client.get('rt', 2);
+    rfx = client.get('rf', 0);
+    rfy = client.get('rf', 2);
+    rfz = 0;
+    
+    rtx = client.get('rt', 1);
+    rty = client.get('rt', 2);
+    rtz = 0;
  
+    lfx = -client.get('lf', 0);
+    lfy = client.get('lf', 2);
+    lfz = 0;
+    
+    ltx = -client.get('lt', 1);
+    lty = client.get('lt', 2);
+    ltz = 0;
+    
     %calculate rotation matrix for each data value
-    rx1 = [1, 0, 0; 0, cosd(x1), -sind(x1); 0, sind(x1), cosd(x1)];
-    ry1 = [cosd(y1), 0, sind(y1); 0, 1, 0; -sind(y1), 0, cosd(y1)];
-    rz1 = [cosd(z1), -sind(z1), 0; sind(z1), cosd(z1), 0; 0, 0, 1];
+    Rrfx = [1, 0, 0; 0, cosd(rfx), -sind(rfx); 0, sind(rfx), cosd(rfx)];
+    Rrfy = [cosd(rfy), 0, sind(rfy); 0, 1, 0; -sind(rfy), 0, cosd(rfy)];
+    Rrfz = [cosd(rfz), -sind(rfz), 0; sind(rfz), cosd(rfz), 0; 0, 0, 1];
     
     %calculate rotation matrix for vector 2
-    rx2 = [1, 0, 0; 0, cosd(x2), -sind(x2); 0, sind(x2), cosd(x2)];
-    ry2 = [cosd(y2), 0, sind(y2); 0, 1, 0; -sind(y2), 0, cosd(y2)];
-    rz2 = [cosd(z2), -sind(z2), 0; sind(z2), cosd(z2), 0; 0, 0, 1];
+    Rrtx = [1, 0, 0; 0, cosd(rtx), -sind(rtx); 0, sind(rtx), cosd(rtx)];
+    Rrty = [cosd(rty), 0, sind(rty); 0, 1, 0; -sind(rty), 0, cosd(rty)];
+    Rrtz = [cosd(rtz), -sind(rtz), 0; sind(rtz), cosd(rtz), 0; 0, 0, 1];
     
-    %calculate vector 1 for left femur
-    lfv = [1,0,0;0,0,1;0,-1,0]*rx1*ry1*rz1*[0;0;-1];
-
-    %calculate vector 2 for right femur
-    rfv = [0;0;-1];%rx2*ry2*rz2*[0;0;-1];
+    %calculate rotation matrix for each data value
+    Rlfx = [1, 0, 0; 0, cosd(lfx), -sind(lfx); 0, sind(lfx), cosd(lfx)];
+    Rlfy = [cosd(lfy), 0, sind(lfy); 0, 1, 0; -sind(lfy), 0, cosd(lfy)];
+    Rlfz = [cosd(lfz), -sind(lfz), 0; sind(lfz), cosd(lfz), 0; 0, 0, 1];
+    
+    %calculate rotation matrix for vector 2
+    Rltx = [1, 0, 0; 0, cosd(ltx), -sind(ltx); 0, sind(ltx), cosd(ltx)];
+    Rlty = [cosd(lty), 0, sind(lty); 0, 1, 0; -sind(lty), 0, cosd(lty)];
+    Rltz = [cosd(ltz), -sind(ltz), 0; sind(ltz), cosd(ltz), 0; 0, 0, 1];
+    
+    %calculate vectors
+    rf = Rrfx*Rrfy*Rrfz*[0;0;-1];
+    rt = Rrtx*Rrty*Rrtz*[0;0;-1];
+    lf = Rlfx*Rlfy*Rlfz*[0;0;-1];
+    lt = Rltx*Rlty*Rltz*[0;0;-1];
     
     %update 3D plot data
-    xdata = [0, 0, 0, 0, lfv(1), rfv(1)+lfv(1)];
-    ydata = [-.25, -.25, -.25, .25, .25+lfv(2), .25+rfv(2)+lfv(2)];
-    zdata = [0, 1, 2, 2, 2+lfv(3), 2+rfv(3)+lfv(3)];
+    xdata = [rf(1)+rt(1), rf(1), 0, 0, lf(1), lf(1)+lt(1)];
+    ydata = [rf(2)+rt(2)-0.25, rf(2)-0.25, -0.25, 0.25, lf(2)+0.25, lf(2)+lt(2)+0.25];
+    zdata = [rf(3)+rt(3)+2, rf(3)+2, 2, 2, lf(3)+2, lf(3)+lt(3)+2];
 
     
     %try to update and draw to figure
