@@ -29,7 +29,7 @@ class client():
     #request data to process and process it constantly
     def process(self):
         while self.running:
-            time.sleep(0.050)
+            time.sleep(0.05)
             self.sock.send(self.send_request)
             self.data = json.loads(self.sock.recv(4096).decode())
 
