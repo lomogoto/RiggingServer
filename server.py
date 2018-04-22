@@ -10,7 +10,7 @@ import smbus
 class server():
     #set configuration variables
     port = 6500
-    alpha = 1#.005
+    alpha = 0.01
 
     #number of times to poll data when calibrating
     n = 100
@@ -58,10 +58,10 @@ class server():
         
                 #build sensors
                 self.sensors = {
-                    #'rf': self.init_mpu6051(0x68),
-                    #'lf': self.init_mpu6051(0x69),
-                    'rt':self.init_alt10(0x1D, 0x6B)}
-                    #'lt':self.init_alt10(0x1E, 0x6A)}
+                    'rf':self.init_mpu6050(0x68),
+                    'rt':self.init_alt10(0x1D, 0x6B),
+                    'lf':self.init_mpu6050(0x69),
+                    'lt':self.init_alt10(0x1E, 0x6A)}
 
                 #initialize the sensor data
                 for s in self.sensors:
@@ -108,7 +108,7 @@ class server():
             addr_g:('gx', 'gy', 'gz')}
 
         #make dictionary for sensor
-        sensor = {'addresses':addresses, 'registers':registers, 'cal_address':addr_g, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':245}
+        sensor = {'addresses':addresses, 'registers':registers, 'cal_address':addr_g, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':245, 'up':'-x'}
 
         #return the sensor dictionary
         return sensor
@@ -160,7 +160,7 @@ class server():
         addresses = {address:('ax', 'ay', 'az', 'gx', 'gy', 'gz')}
 
         #make dictionary for sensor
-        sensor = {'addresses':addresses, 'registers':registers, 'cal_address': address, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':250}
+        sensor = {'addresses':addresses, 'registers':registers, 'cal_address': address, 'calibrations':{'gx':0, 'gy':0, 'gz':0}, 'range':250, 'up':'y'}
 
         #return the sensor dictionary
         return sensor
@@ -180,7 +180,6 @@ class server():
 
             #save calibration
             sensor['calibrations'][c] = average
-            #print(average)
 
     #read from sensors and integrate on a loop
     def process(self):
@@ -215,14 +214,17 @@ class server():
         
                             #read each register for sensor
                             read[r] = self.get_register_data(address, register, calibration)
-    
+                    '''
                     #get sensor vectors
                     a = [read['ax'], read['ay'], read['az']]
-                    m = [read['mx'], read['my'], read['mz']]
+                    try:
+                    	m = [read['mx'], read['my'], read['mz']]
+                    except:
+                        m = [1, 1, 1]
 
                     #get basis vectors
                     norm_a = math.sqrt(a[0]**2 + a[1]**2 + a[2]**2)
-                    z = [a[i]/norm_a for i in range(3)]
+                    z = [-a[i]/norm_a for i in range(3)]
                     z_dot_m = sum([z[i]*m[i] for i in range(3)])
                     x = [m[i]-z[i]*z_dot_m for i in range(3)]
                     norm_x = math.sqrt(x[0]**2 + x[1]**2 + x[2]**2)
@@ -234,7 +236,7 @@ class server():
 
                     #find euler angles
                     euler = [0,0,0]
-                    sy = math.sqrt(R[0][0]**2 + R[1][1]**2)
+                    sy = math.sqrt(R[2][1]**2 + R[2][2]**2)
                     euler[1] = math.degrees(math.atan2(-R[2][0], sy))
                     if sy > 1e-6:
                         euler[0] = math.degrees(math.atan2(R[2][1], R[2][2]))
@@ -246,28 +248,35 @@ class server():
                     #adjust for full rotations
                     for i in range(3):
                         while self.data[s][i]-euler[i] > 180:
-                            euler[i] += 360
+                            self.data[s][i] -= 360
                         while self.data[s][i]-euler[i] < -180:
-                            euler[i] -= 360
+                            self.data[s][i] += 360
+
+                    '''
+                    #get gyro data
+                    g = [read['gx'], read['gy'], read['gz']]
 
                     #get angles from acceleration
-                    #x = math.atan2(read['ay'], read['az'])*180/math.pi - 90
-                    #y = math.atan2(read['ax'], read['az'])*180/math.pi
-                    #z = 90 - math.atan2(read['ay'], read['ax'])*180/math.pi
-    
-                    #calculate the impact of gravity on that angle
-                    #mag = math.sqrt(read['ax']**2 + read['ay']**2 + read['az']**2)
-                    #xMag = 1 #math.sqrt(read['ay']**2 + read['az']**2) / mag
-                    #yMag = 0 #math.sqrt(read['ax']**2 + read['az']**2) / mag
-                    #zMag = 1 #math.sqrt(read['ay']**2 + read['ax']**2) / mag
-    
+                    euler = [None, None, None]
+                    if sensor['up'] == '-x':
+                        euler[1] = math.degrees(math.atan2(read['az'], -read['ax']))
+                        euler[2] = -math.degrees(math.atan2(read['ay'], -read['ax']))
+                    elif sensor['up'] == 'y':
+                        euler[0] = math.degrees(math.atan2(read['az'], read['ay']))
+                        euler[2] = -math.degrees(math.atan2(read['ax'], read['ay']))
+
                     #range factor
                     scale = sensor['range']*2**-15
 
                     #update data for sensor
-                    self.data[s][0] = (1 - self.alpha) * (self.data[s][0] + read['gx']*scale * dt) + self.alpha * euler[0]
-                    self.data[s][1] = (1 - self.alpha) * (self.data[s][1] + read['gy']*scale * dt) + self.alpha * euler[1]
-                    self.data[s][2] = (1 - self.alpha) * (self.data[s][2] + read['gz']*scale * dt) + self.alpha * euler[2]
+                    for i in range(3):
+                        #chak if filtering or not
+                        alpha = self.alpha
+                        if euler[i] == None:
+                            alpha = euler[i] = 0
+
+                        #filter data
+                        self.data[s][i] = (1 - alpha) * (self.data[s][i] + g[i]*scale * dt) - alpha * euler[i]
 
         #print out any errors from requests
         except Exception as e:
