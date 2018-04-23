@@ -130,64 +130,70 @@ class server():
 
                 #pole analog data
                 for a in self.analogs:
+                    #pick analog by name
                     analog = self.analogs[a]
-                    try:
-                        for i in range(4):
+
+                    #collect data
+                    for i in range(4):
+                        #make data zero if sensor unreachable
+                        try:
                             self.data[a][i] = int(analog.read_adc(i, gain = self.gain) > self.down)
-                    except IOError:
-                        self.data[a] = [0, 0, 0, 0]
+                        except IOError:
+                            self.data[a][i] = 0
     
                 #loop over sensors and registers to get readings for each
-                for s in self.sensors:
+                for s in list(self.sensors):
                     #pick a sensor by name
                     sensor = self.sensors[s]
     
                     #dictionary of sensor reading
                     read = {}
 
-                    #loop over addresses
-                    for address in sensor['addresses']:
-                        #loop over registers
-                        for r in sensor['addresses'][address]:
-                            #pick a register by name
-                            register = sensor['registers'][r]
-        
-                            #check for calibrations
-                            try:
-                                calibration = sensor['calibrations'][r]
-                            except KeyError:
-                                calibration = 0
-        
-                            #read each register for sensor
-                            try:
+                    #delete sensor if un reachable
+                    try:
+                        #loop over addresses
+                        for address in sensor['addresses']:
+                            #loop over registers
+                            for r in sensor['addresses'][address]:
+                                #pick a register by name
+                                register = sensor['registers'][r]
+            
+                                #check for calibrations
+                                try:
+                                    calibration = sensor['calibrations'][r]
+                                except KeyError:
+                                    calibration = 0
+            
+                                #read each register for sensor
                                 read[r] = self.get_register_data(address, register, calibration)
-                            except IOError:
-                                read[r] = 0
-
-                    #get gyro data
-                    g = [read['gx'], read['gy'], read['gz']]
-
-                    #get angles from acceleration
-                    euler = [None, None, None]
-                    if sensor['up'] == '-x':
-                        euler[1] = math.degrees(math.atan2(read['az'], -read['ax']))
-                        euler[2] = -math.degrees(math.atan2(read['ay'], -read['ax']))
-                    elif sensor['up'] == 'y':
-                        euler[0] = math.degrees(math.atan2(read['az'], read['ay']))
-                        euler[2] = -math.degrees(math.atan2(read['ax'], read['ay']))
-
-                    #range factor
-                    scale = sensor['range']*2**-15
-
-                    #update data for sensor
-                    for i in range(3):
-                        #chak if filtering or not
-                        alpha = self.alpha
-                        if euler[i] == None:
-                            alpha = euler[i] = 0
-
-                        #filter data
-                        self.data[s][i] = (1 - alpha) * (self.data[s][i] + g[i]*scale * dt) - alpha * euler[i]
+    
+                        #get gyro data
+                        g = [read['gx'], read['gy'], read['gz']]
+    
+                        #get angles from acceleration
+                        euler = [None, None, None]
+                        if sensor['up'] == '-x':
+                            euler[1] = math.degrees(math.atan2(read['az'], -read['ax']))
+                            euler[2] = -math.degrees(math.atan2(read['ay'], -read['ax']))
+                        elif sensor['up'] == 'y':
+                            euler[0] = math.degrees(math.atan2(read['az'], read['ay']))
+                            euler[2] = -math.degrees(math.atan2(read['ax'], read['ay']))
+    
+                        #range factor
+                        scale = sensor['range']*2**-15
+    
+                        #update data for sensor
+                        for i in range(3):
+                            #check if filtering or not
+                            alpha = self.alpha
+                            if euler[i] == None:
+                                alpha = euler[i] = 0
+    
+                            #filter data
+                            self.data[s][i] = (1 - alpha) * (self.data[s][i] + g[i]*scale * dt) - alpha * euler[i]
+                    except IOError:
+                        del self.sensors[s]
+                        del self.data[s]
 
         #print out any errors from requests
         except Exception as e:
