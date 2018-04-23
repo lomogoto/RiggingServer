@@ -11,7 +11,7 @@ import Adafruit_ADS1x15
 class server():
     #set configuration variables
     port = 6500
-    alpha = 0.01
+    alpha = 0.005
     gain = 2/3
     down = 10000
 
