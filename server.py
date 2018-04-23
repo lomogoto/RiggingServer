@@ -11,12 +11,12 @@ import Adafruit_ADS1x15
 class server():
     #set configuration variables
     port = 6500
-    alpha = 0.005
+    alpha = 0.02
     gain = 2/3
     down = 10000
 
     #number of times to poll data when calibrating
-    n = 100
+    n = 1000
 
     #initialize the server
     def __init__(self):
