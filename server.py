@@ -30,7 +30,9 @@ class server():
         s.listen(1)
 
         #make new socket accepting a connection
+        print('Accepting Connections')
         self.sock, addr = s.accept()
+        print('Connected to ' + str(addr[0]))
     
         #sensor data
         self.data = {'t' : 0}
@@ -98,6 +100,105 @@ class server():
                 listening = False
                 self.running = False
                 self.sock.send('{}'.encode())
+
+    #calibrate a sensor
+    def calibrate(self, sensor):
+        #loop over registers to calibrate
+        for c in sensor['calibrations']:
+            #pick by name
+            register = sensor['registers'][c]
+
+            #average first readings
+            total = 0
+            for i in range(self.n):
+                total += self.get_register_data(sensor['cal_address'], register)
+            average = total / self.n
+
+            #save calibration
+            sensor['calibrations'][c] = average
+
+    #read from sensors and integrate on a loop
+    def process(self):
+        #attempt to process requests
+        try:
+            #loop until server is shut down
+            while self.running:
+                #start by reading time and change in time
+                t = time.time()
+                dt = t - self.data['t']
+                self.data['t'] = t
+
+                #pole analog data
+                for a in self.analogs:
+                    analog = self.analogs[a]
+                    try:
+                        for i in range(4):
+                            self.data[a][i] = int(analog.read_adc(i, gain = self.gain) > self.down)
+                    except IOError:
+                        self.data[a] = [0, 0, 0, 0]
+    
+                #loop over sensors and registers to get readings for each
+                for s in self.sensors:
+                    #pick a sensor by name
+                    sensor = self.sensors[s]
+    
+                    #dictionary of sensor reading
+                    read = {}
+
+                    #loop over addresses
+                    for address in sensor['addresses']:
+                        #loop over registers
+                        for r in sensor['addresses'][address]:
+                            #pick a register by name
+                            register = sensor['registers'][r]
+        
+                            #check for calibrations
+                            try:
+                                calibration = sensor['calibrations'][r]
+                            except KeyError:
+                                calibration = 0
+        
+                            #read each register for sensor
+                            try:
+                                read[r] = self.get_register_data(address, register, calibration)
+                            except IOError:
+                                read[r] = 0
+
+                    #get gyro data
+                    g = [read['gx'], read['gy'], read['gz']]
+
+                    #get angles from acceleration
+                    euler = [None, None, None]
+                    if sensor['up'] == '-x':
+                        euler[1] = math.degrees(math.atan2(read['az'], -read['ax']))
+                        euler[2] = -math.degrees(math.atan2(read['ay'], -read['ax']))
+                    elif sensor['up'] == 'y':
+                        euler[0] = math.degrees(math.atan2(read['az'], read['ay']))
+                        euler[2] = -math.degrees(math.atan2(read['ax'], read['ay']))
+
+                    #range factor
+                    scale = sensor['range']*2**-15
+
+                    #update data for sensor
+                    for i in range(3):
+                        #chak if filtering or not
+                        alpha = self.alpha
+                        if euler[i] == None:
+                            alpha = euler[i] = 0
+
+                        #filter data
+                        self.data[s][i] = (1 - alpha) * (self.data[s][i] + g[i]*scale * dt) - alpha * euler[i]
+
+        #print out any errors from requests
+        except Exception as e:
+            print('Error: ' + str(e))
+
+    #pack data into one dictionary for json dump
+    def pack(self):
+        data = self.data
+
+        #return data encoded into a string
+        return json.dumps(data, separators = (',', ':'))
 
     #initialize alt10 sensor
     def init_alt10(self, addr_am, addr_g):
@@ -176,97 +277,6 @@ class server():
 
         #return the sensor dictionary
         return sensor
-
-    #calibrate a sensor
-    def calibrate(self, sensor):
-        #loop over registers to calibrate
-        for c in sensor['calibrations']:
-            #pick by name
-            register = sensor['registers'][c]
-
-            #average first readings
-            total = 0
-            for i in range(self.n):
-                total += self.get_register_data(sensor['cal_address'], register)
-            average = total / self.n
-
-            #save calibration
-            sensor['calibrations'][c] = average
-
-    #read from sensors and integrate on a loop
-    def process(self):
-        #attempt to process requests
-        try:
-            #loop until server is shut down
-            while self.running:
-                #start by reading time and change in time
-                t = time.time()
-                dt = t - self.data['t']
-                self.data['t'] = t
-
-                for a in self.analogs:
-                    analog = self.analogs[a]
-                    for i in range(4):
-                        self.data[a][i] = analog.read_adc(i, gain = self.gain)# > self.down)
-    
-                #loop over sensors and registers to get readings for each
-                for s in self.sensors:
-                    #pick a sensor by name
-                    sensor = self.sensors[s]
-    
-                    #dictionary of sensor reading
-                    read = {}
-
-                    #loop over addresses
-                    for address in sensor['addresses']:
-                        #loop over registers
-                        for r in sensor['addresses'][address]:
-                            #pick a register by name
-                            register = sensor['registers'][r]
-        
-                            try:
-                                calibration = sensor['calibrations'][r]
-                            except:
-                                calibration = 0
-        
-                            #read each register for sensor
-                            read[r] = self.get_register_data(address, register, calibration)
-
-                    #get gyro data
-                    g = [read['gx'], read['gy'], read['gz']]
-
-                    #get angles from acceleration
-                    euler = [None, None, None]
-                    if sensor['up'] == '-x':
-                        euler[1] = math.degrees(math.atan2(read['az'], -read['ax']))
-                        euler[2] = -math.degrees(math.atan2(read['ay'], -read['ax']))
-                    elif sensor['up'] == 'y':
-                        euler[0] = math.degrees(math.atan2(read['az'], read['ay']))
-                        euler[2] = -math.degrees(math.atan2(read['ax'], read['ay']))
-
-                    #range factor
-                    scale = sensor['range']*2**-15
-
-                    #update data for sensor
-                    for i in range(3):
-                        #chak if filtering or not
-                        alpha = self.alpha
-                        if euler[i] == None:
-                            alpha = euler[i] = 0
-
-                        #filter data
-                        self.data[s][i] = (1 - alpha) * (self.data[s][i] + g[i]*scale * dt) - alpha * euler[i]
-
-        #print out any errors from requests
-        except Exception as e:
-            print('Error: ' + str(e))
-
-    #pack data into one dictionary for json dump
-    def pack(self):
-        data = self.data
-
-        #return data encoded into a string
-        return json.dumps(data, separators = (',', ':'))
 
     #read short using sensor address and register address (high, low)
     def get_register_data(self, address, register, calibration = 0):

@@ -65,12 +65,17 @@ class client():
 
 #run basic test if main
 if __name__ == '__main__':
+    import sys
     c = client()
     c.start()
     try:
         while True:
-            time.sleep(0.5)
-            print(c.data)
+            try:
+                time.sleep(0.25)
+                print(c.data[sys.argv[1]])
+            except IndexError:
+                time.sleep(0.25)
+                print(c.data)
     except KeyboardInterrupt:
         pass
     finally:
