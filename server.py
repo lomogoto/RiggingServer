@@ -70,8 +70,8 @@ class server():
 
                 #add analog sensors
                 self.analogs = {
-                    'rp':Adafruit_ADS1x15.ADS1115(address=0x49),
-                    'lp':Adafruit_ADS1x15.ADS1115(address=0x48)}
+                    'rp':Adafruit_ADS1x15.ADS1115(address=0x48),
+                    'lp':Adafruit_ADS1x15.ADS1115(address=0x49)}
 
                 #initialize the sensor data
                 for s in self.sensors:
